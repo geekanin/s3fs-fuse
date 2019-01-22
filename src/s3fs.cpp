@@ -840,7 +840,7 @@ static int s3fs_getattr(const char* path, struct stat* stbuf)
 {
   int result;
 
-  S3FS_PRN_INFO("[path=%s]", path);
+  S3FS_PRN_INFO("CSE[s3fs_getattr][path=%s]", path);
 
   // check parent directory attribute.
   if(0 != (result = check_parent_object_access(path, X_OK))){
@@ -875,6 +875,7 @@ static int s3fs_readlink(const char* path, char* buf, size_t size)
   if(!path || !buf || 0 >= size){
     return 0;
   }
+  S3FS_PRN_INFO("CSE[s3fs_readlink][path=%s]", path);
   // Open
   FdEntity*   ent;
   if(NULL == (ent = get_local_fent(path))){
@@ -977,7 +978,7 @@ static int s3fs_mknod(const char *path, mode_t mode, dev_t rdev)
   int       result;
   struct fuse_context* pcxt;
 
-  S3FS_PRN_INFO("[path=%s][mode=%04o][dev=%ju]", path, mode, (uintmax_t)rdev);
+  S3FS_PRN_INFO("CSE[s3fs_mknod][path=%s][mode=%04o][dev=%ju]", path, mode, (uintmax_t)rdev);
 
   if(NULL == (pcxt = fuse_get_context())){
     return -EIO;
@@ -998,7 +999,7 @@ static int s3fs_create(const char* path, mode_t mode, struct fuse_file_info* fi)
   int result;
   struct fuse_context* pcxt;
 
-  S3FS_PRN_INFO("[path=%s][mode=%04o][flags=%d]", path, mode, fi->flags);
+  S3FS_PRN_INFO("CSE[s3fs_create][path=%s][mode=%04o][flags=%d]", path, mode, fi->flags);
 
   if(NULL == (pcxt = fuse_get_context())){
     return -EIO;
@@ -1064,7 +1065,7 @@ static int s3fs_mkdir(const char* path, mode_t mode)
   int result;
   struct fuse_context* pcxt;
 
-  S3FS_PRN_INFO("[path=%s][mode=%04o]", path, mode);
+  S3FS_PRN_INFO("CSE[s3fs_mkdir][path=%s][mode=%04o]", path, mode);
 
   if(NULL == (pcxt = fuse_get_context())){
     return -EIO;
@@ -1092,7 +1093,7 @@ static int s3fs_unlink(const char* path)
 {
   int result;
 
-  S3FS_PRN_INFO("[path=%s]", path);
+  S3FS_PRN_INFO("CSE[s3fs_unlink][path=%s]", path);
 
   if(0 != (result = check_parent_object_access(path, W_OK | X_OK))){
     return result;
@@ -1127,7 +1128,7 @@ static int s3fs_rmdir(const char* path)
   string strpath;
   struct stat stbuf;
 
-  S3FS_PRN_INFO("[path=%s]", path);
+  S3FS_PRN_INFO("CSE[s3fs_rmdir][path=%s]", path);
 
   if(0 != (result = check_parent_object_access(path, W_OK | X_OK))){
     return result;
@@ -1182,7 +1183,7 @@ static int s3fs_symlink(const char* from, const char* to)
   int result;
   struct fuse_context* pcxt;
 
-  S3FS_PRN_INFO("[from=%s][to=%s]", from, to);
+  S3FS_PRN_INFO("CSE[s3fs_symlink][from=%s][to=%s]", from, to);
 
   if(NULL == (pcxt = fuse_get_context())){
     return -EIO;
@@ -1502,7 +1503,7 @@ static int s3fs_rename(const char* from, const char* to)
   struct stat buf;
   int result;
 
-  S3FS_PRN_INFO("[from=%s][to=%s]", from, to);
+  S3FS_PRN_INFO("CSE[s3fs_rename][from=%s][to=%s]", from, to);
 
   if(0 != (result = check_parent_object_access(to, W_OK | X_OK))){
     // not permit writing "to" object parent dir.
@@ -1535,7 +1536,7 @@ static int s3fs_rename(const char* from, const char* to)
 
 static int s3fs_link(const char* from, const char* to)
 {
-  S3FS_PRN_INFO("[from=%s][to=%s]", from, to);
+  S3FS_PRN_INFO("CSE[s3fs_link][from=%s][to=%s]", from, to);
   return -EPERM;
 }
 
@@ -1549,7 +1550,7 @@ static int s3fs_chmod(const char* path, mode_t mode)
   struct stat stbuf;
   dirtype nDirType = DIRTYPE_UNKNOWN;
 
-  S3FS_PRN_INFO("[path=%s][mode=%04o]", path, mode);
+  S3FS_PRN_INFO("CSE[s3fs_chmod][path=%s][mode=%04o]", path, mode);
 
   if(0 == strcmp(path, "/")){
     S3FS_PRN_ERR("Could not change mode for mount point.");
@@ -1623,7 +1624,7 @@ static int s3fs_chmod_nocopy(const char* path, mode_t mode)
   struct stat stbuf;
   dirtype     nDirType = DIRTYPE_UNKNOWN;
 
-  S3FS_PRN_INFO1("[path=%s][mode=%04o]", path, mode);
+  S3FS_PRN_INFO1("CSE[s3fs_chmod_nocopy][path=%s][mode=%04o]", path, mode);
 
   if(0 == strcmp(path, "/")){
     S3FS_PRN_ERR("Could not change mode for mount point.");
@@ -1700,7 +1701,7 @@ static int s3fs_chown(const char* path, uid_t uid, gid_t gid)
   struct stat stbuf;
   dirtype nDirType = DIRTYPE_UNKNOWN;
 
-  S3FS_PRN_INFO("[path=%s][uid=%u][gid=%u]", path, (unsigned int)uid, (unsigned int)gid);
+  S3FS_PRN_INFO("CSE[s3fs_chown][path=%s][uid=%u][gid=%u]", path, (unsigned int)uid, (unsigned int)gid);
 
   if(0 == strcmp(path, "/")){
     S3FS_PRN_ERR("Could not change owner for mount point.");
@@ -1769,7 +1770,7 @@ static int s3fs_chown_nocopy(const char* path, uid_t uid, gid_t gid)
   struct stat stbuf;
   dirtype     nDirType = DIRTYPE_UNKNOWN;
 
-  S3FS_PRN_INFO1("[path=%s][uid=%u][gid=%u]", path, (unsigned int)uid, (unsigned int)gid);
+  S3FS_PRN_INFO1("CSE[s3fs_chown_nocopy][path=%s][uid=%u][gid=%u]", path, (unsigned int)uid, (unsigned int)gid);
 
   if(0 == strcmp(path, "/")){
     S3FS_PRN_ERR("Could not change owner for mount point.");
@@ -1854,7 +1855,7 @@ static int s3fs_utimens(const char* path, const struct timespec ts[2])
   struct stat stbuf;
   dirtype nDirType = DIRTYPE_UNKNOWN;
 
-  S3FS_PRN_INFO("[path=%s][mtime=%jd]", path, (intmax_t)(ts[1].tv_sec));
+  S3FS_PRN_INFO("CSE[s3fs_utimens][path=%s][mtime=%jd]", path, (intmax_t)(ts[1].tv_sec));
 
   if(0 == strcmp(path, "/")){
     S3FS_PRN_ERR("Could not change mtime for mount point.");
@@ -1918,7 +1919,7 @@ static int s3fs_utimens_nocopy(const char* path, const struct timespec ts[2])
   struct stat stbuf;
   dirtype     nDirType = DIRTYPE_UNKNOWN;
 
-  S3FS_PRN_INFO1("[path=%s][mtime=%s]", path, str(ts[1].tv_sec).c_str());
+  S3FS_PRN_INFO1("CSE[s3fs_utimens_nocopy][path=%s][mtime=%s]", path, str(ts[1].tv_sec).c_str());
 
   if(0 == strcmp(path, "/")){
     S3FS_PRN_ERR("Could not change mtime for mount point.");
@@ -1997,7 +1998,7 @@ static int s3fs_truncate(const char* path, off_t size)
   headers_t meta;
   FdEntity* ent = NULL;
 
-  S3FS_PRN_INFO("[path=%s][size=%jd]", path, (intmax_t)size);
+  S3FS_PRN_INFO("CSE[s3fs_truncate][path=%s][size=%jd]", path, (intmax_t)size);
 
   if(size < 0){
     size = 0;
@@ -2062,7 +2063,7 @@ static int s3fs_open(const char* path, struct fuse_file_info* fi)
   struct stat st;
   bool needs_flush = false;
 
-  S3FS_PRN_INFO("[path=%s][flags=%d]", path, fi->flags);
+  S3FS_PRN_INFO("CSE[s3fs_open][path=%s][flags=%d]", path, fi->flags);
 
   // clear stat for reading fresh stat.
   // (if object stat is changed, we refresh it. then s3fs gets always
@@ -2120,7 +2121,7 @@ static int s3fs_read(const char* path, char* buf, size_t size, off_t offset, str
 {
   ssize_t res;
 
-  S3FS_PRN_DBG("[path=%s][size=%zu][offset=%jd][fd=%llu]", path, size, (intmax_t)offset, (unsigned long long)(fi->fh));
+  S3FS_PRN_DBG("CSE[s3fs_read][path=%s][size=%zu][offset=%jd][fd=%llu]", path, size, (intmax_t)offset, (unsigned long long)(fi->fh));
 
   FdEntity* ent;
   if(NULL == (ent = FdManager::get()->ExistOpen(path, static_cast<int>(fi->fh)))){
@@ -2151,7 +2152,7 @@ static int s3fs_write(const char* path, const char* buf, size_t size, off_t offs
 {
   ssize_t res;
 
-  S3FS_PRN_DBG("[path=%s][size=%zu][offset=%jd][fd=%llu]", path, size, (intmax_t)offset, (unsigned long long)(fi->fh));
+  S3FS_PRN_DBG("CSE[s3fs_write][path=%s][size=%zu][offset=%jd][fd=%llu]", path, size, (intmax_t)offset, (unsigned long long)(fi->fh));
 
   FdEntity* ent;
   if(NULL == (ent = FdManager::get()->ExistOpen(path, static_cast<int>(fi->fh)))){
@@ -2171,6 +2172,7 @@ static int s3fs_write(const char* path, const char* buf, size_t size, off_t offs
 
 static int s3fs_statfs(const char* path, struct statvfs* stbuf)
 {
+  S3FS_PRN_INFO("CSE[s3fs_statfs][path=%s]", path);
   // 256T
   stbuf->f_bsize  = 0X1000000;
   stbuf->f_blocks = 0X1000000;
@@ -2184,7 +2186,7 @@ static int s3fs_flush(const char* path, struct fuse_file_info* fi)
 {
   int result;
 
-  S3FS_PRN_INFO("[path=%s][fd=%llu]", path, (unsigned long long)(fi->fh));
+  S3FS_PRN_INFO("CSE[s3fs_flush][path=%s][fd=%llu]", path, (unsigned long long)(fi->fh));
 
   int mask = (O_RDONLY != (fi->flags & O_ACCMODE) ? W_OK : R_OK);
   if(0 != (result = check_parent_object_access(path, X_OK))){
@@ -2217,7 +2219,7 @@ static int s3fs_fsync(const char* path, int datasync, struct fuse_file_info* fi)
 {
   int result = 0;
 
-  S3FS_PRN_INFO("[path=%s][fd=%llu]", path, (unsigned long long)(fi->fh));
+  S3FS_PRN_INFO("CSE[s3fs_fsync][path=%s][fd=%llu]", path, (unsigned long long)(fi->fh));
 
   FdEntity* ent;
   if(NULL != (ent = FdManager::get()->ExistOpen(path, static_cast<int>(fi->fh)))){
@@ -2237,7 +2239,7 @@ static int s3fs_fsync(const char* path, int datasync, struct fuse_file_info* fi)
 
 static int s3fs_release(const char* path, struct fuse_file_info* fi)
 {
-  S3FS_PRN_INFO("[path=%s][fd=%llu]", path, (unsigned long long)(fi->fh));
+  S3FS_PRN_INFO("CSE[s3fs_release][path=%s][fd=%llu]", path, (unsigned long long)(fi->fh));
 
   // [NOTE]
   // All opened file's stats is cached with no truncate flag.
@@ -2280,7 +2282,7 @@ static int s3fs_opendir(const char* path, struct fuse_file_info* fi)
   int result;
   int mask = (O_RDONLY != (fi->flags & O_ACCMODE) ? W_OK : R_OK) | X_OK;
 
-  S3FS_PRN_INFO("[path=%s][flags=%d]", path, fi->flags);
+  S3FS_PRN_INFO("CSE[s3fs_opendir][path=%s][flags=%d]", path, fi->flags);
 
   if(0 == (result = check_object_access(path, mask, NULL))){
     result = check_parent_object_access(path, mask);
@@ -2431,7 +2433,7 @@ static int s3fs_readdir(const char* path, void* buf, fuse_fill_dir_t filler, off
   S3ObjList head;
   int result;
 
-  S3FS_PRN_INFO("[path=%s]", path);
+  S3FS_PRN_INFO("CSE[s3fs_readdir][path=%s]", path);
 
   if(0 != (result = check_object_access(path, X_OK, NULL))){
     return result;
@@ -3031,7 +3033,7 @@ static int s3fs_setxattr(const char* path, const char* name, const char* value, 
 static int s3fs_setxattr(const char* path, const char* name, const char* value, size_t size, int flags)
 #endif
 {
-  S3FS_PRN_INFO("[path=%s][name=%s][value=%p][size=%zu][flags=%d]", path, name, value, size, flags);
+  S3FS_PRN_INFO("CSE[s3fs_setxattr][path=%s][name=%s][value=%p][size=%zu][flags=%d]", path, name, value, size, flags);
 
   if((value && 0 == size) || (!value && 0 < size)){
     S3FS_PRN_ERR("Wrong parameter: value(%p), size(%zu)", value, size);
@@ -3118,7 +3120,7 @@ static int s3fs_getxattr(const char* path, const char* name, char* value, size_t
 static int s3fs_getxattr(const char* path, const char* name, char* value, size_t size)
 #endif
 {
-  S3FS_PRN_INFO("[path=%s][name=%s][value=%p][size=%zu]", path, name, value, size);
+  S3FS_PRN_INFO("CSE[s3fs_getxattr][path=%s][name=%s][value=%p][size=%zu]", path, name, value, size);
 
   if(!path || !name){
     return -EIO;
@@ -3189,7 +3191,7 @@ static int s3fs_getxattr(const char* path, const char* name, char* value, size_t
 
 static int s3fs_listxattr(const char* path, char* list, size_t size)
 {
-  S3FS_PRN_INFO("[path=%s][list=%p][size=%zu]", path, list, size);
+  S3FS_PRN_INFO("CSE[s3fs_listxattr][path=%s][list=%p][size=%zu]", path, list, size);
 
   if(!path){
     return -EIO;
@@ -3257,7 +3259,7 @@ static int s3fs_listxattr(const char* path, char* list, size_t size)
 
 static int s3fs_removexattr(const char* path, const char* name)
 {
-  S3FS_PRN_INFO("[path=%s][name=%s]", path, name);
+  S3FS_PRN_INFO("CSE[s3fs_removexattr][path=%s][name=%s]", path, name);
 
   if(!path || !name){
     return -EIO;
@@ -3376,7 +3378,7 @@ static void s3fs_exit_fuseloop(int exit_status) {
 
 static void* s3fs_init(struct fuse_conn_info* conn)
 {
-  S3FS_PRN_INIT_INFO("init v%s(commit:%s) with %s", VERSION, COMMIT_HASH_VAL, s3fs_crypt_lib_name());
+  S3FS_PRN_INIT_INFO("CSE[s3fs_init]init v%s(commit:%s) with %s", VERSION, COMMIT_HASH_VAL, s3fs_crypt_lib_name());
 
   // cache(remove cache dirs at first)
   if(is_remove_cache && (!CacheFileStat::DeleteCacheFileStatDirectory() || !FdManager::DeleteCacheDirectory())){
@@ -3425,7 +3427,7 @@ static void* s3fs_init(struct fuse_conn_info* conn)
 
 static void s3fs_destroy(void*)
 {
-  S3FS_PRN_INFO("destroy");
+  S3FS_PRN_INFO("CSE[destroy]");
 
   // cache(remove at last)
   if(is_remove_cache && (!CacheFileStat::DeleteCacheFileStatDirectory() || !FdManager::DeleteCacheDirectory())){
@@ -3435,7 +3437,7 @@ static void s3fs_destroy(void*)
 
 static int s3fs_access(const char* path, int mask)
 {
-  S3FS_PRN_INFO("[path=%s][mask=%s%s%s%s]", path,
+  S3FS_PRN_INFO("CSE[s3fs_access][path=%s][mask=%s%s%s%s]", path,
           ((mask & R_OK) == R_OK) ? "R_OK " : "",
           ((mask & W_OK) == W_OK) ? "W_OK " : "",
           ((mask & X_OK) == X_OK) ? "X_OK " : "",
