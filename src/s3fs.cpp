@@ -42,6 +42,7 @@
 #include <map>
 #include <string>
 #include <list>
+#include <ctime>
 
 #include "common.h"
 #include "s3fs.h"
@@ -836,8 +837,7 @@ static int put_headers(const char* path, headers_t& meta, bool is_copy)
   return 0;
 }
 
-static int s3fs_getattr(const char* path, struct stat* stbuf)
-{
+static int s3fs_getattr_actual(const char* path, struct stat* stbuf){
   int result;
 
   S3FS_PRN_INFO("CSE[s3fs_getattr][path=%s]", path);
@@ -870,7 +870,17 @@ static int s3fs_getattr(const char* path, struct stat* stbuf)
   return result;
 }
 
-static int s3fs_readlink(const char* path, char* buf, size_t size)
+static int s3fs_getattr(const char* path, struct stat* stbuf)
+{
+  clock_t time_req;
+  time_req = clock();
+  int result = s3fs_getattr_actual(path, stbuf);
+  time_req = clock()- time_req;
+  S3FS_PRN_INFO("CSE[s3fs_getattr][time_elapsed=%9.6f seconds]", (float)time_req/CLOCKS_PER_SEC);
+  return result;
+}
+
+static int s3fs_readlink_actual(const char* path, char* buf, size_t size)
 {
   if(!path || !buf || 0 >= size){
     return 0;
@@ -909,6 +919,16 @@ static int s3fs_readlink(const char* path, char* buf, size_t size)
   S3FS_MALLOCTRIM(0);
 
   return 0;
+}
+
+static int s3fs_readlink(const char* path, char* buf, size_t size)
+{
+  clock_t time_req;
+  time_req = clock();
+  int result = s3fs_readlink_actual(path, buf, size);
+  time_req = clock()- time_req;
+  S3FS_PRN_INFO("CSE[s3fs_readlink][time_elapsed=%9.6f seconds]", (float)time_req/CLOCKS_PER_SEC);
+  return result;
 }
 
 static int do_create_bucket(void)
@@ -973,7 +993,7 @@ static int create_file_object(const char* path, mode_t mode, uid_t uid, gid_t gi
   return s3fscurl.PutRequest(path, meta, -1);    // fd=-1 means for creating zero byte object.
 }
 
-static int s3fs_mknod(const char *path, mode_t mode, dev_t rdev)
+static int s3fs_mknod_actual(const char *path, mode_t mode, dev_t rdev)
 {
   int       result;
   struct fuse_context* pcxt;
@@ -994,7 +1014,17 @@ static int s3fs_mknod(const char *path, mode_t mode, dev_t rdev)
   return result;
 }
 
-static int s3fs_create(const char* path, mode_t mode, struct fuse_file_info* fi)
+static int s3fs_mknod(const char *path, mode_t mode, dev_t rdev)
+{
+  clock_t time_req;
+  time_req = clock();
+  int result = s3fs_mknod_actual(path, mode, rdev);
+  time_req = clock()- time_req;
+  S3FS_PRN_INFO("CSE[s3fs_mknod][time_elapsed=%9.6f seconds]", (float)time_req/CLOCKS_PER_SEC);
+  return result;
+}
+
+static int s3fs_create_actual(const char* path, mode_t mode, struct fuse_file_info* fi)
 {
   int result;
   struct fuse_context* pcxt;
@@ -1037,6 +1067,16 @@ static int s3fs_create(const char* path, mode_t mode, struct fuse_file_info* fi)
   return 0;
 }
 
+static int s3fs_create(const char* path, mode_t mode, struct fuse_file_info* fi)
+{
+  clock_t time_req;
+  time_req = clock();
+  int result = s3fs_create_actual(path, mode, fi);
+  time_req = clock()- time_req;
+  S3FS_PRN_INFO("CSE[s3fs_create][time_elapsed=%9.6f seconds]", (float)time_req/CLOCKS_PER_SEC);
+  return result;
+}
+
 static int create_directory_object(const char* path, mode_t mode, time_t time, uid_t uid, gid_t gid)
 {
   S3FS_PRN_INFO1("[path=%s][mode=%04o][time=%jd][uid=%u][gid=%u]", path, mode, (intmax_t)time, (unsigned int)uid, (unsigned int)gid);
@@ -1060,7 +1100,7 @@ static int create_directory_object(const char* path, mode_t mode, time_t time, u
   return s3fscurl.PutRequest(tpath.c_str(), meta, -1);    // fd=-1 means for creating zero byte object.
 }
 
-static int s3fs_mkdir(const char* path, mode_t mode)
+static int s3fs_mkdir_actual(const char* path, mode_t mode)
 {
   int result;
   struct fuse_context* pcxt;
@@ -1089,7 +1129,17 @@ static int s3fs_mkdir(const char* path, mode_t mode)
   return result;
 }
 
-static int s3fs_unlink(const char* path)
+static int s3fs_mkdir(const char* path, mode_t mode)
+{
+  clock_t time_req;
+  time_req = clock();
+  int result = s3fs_mkdir_actual(path, mode);
+  time_req = clock()- time_req;
+  S3FS_PRN_INFO("CSE[s3fs_mkdir][time_elapsed=%9.6f seconds]", (float)time_req/CLOCKS_PER_SEC);
+  return result;
+}
+
+static int s3fs_unlink_actual(const char* path)
 {
   int result;
 
@@ -1104,6 +1154,16 @@ static int s3fs_unlink(const char* path)
   StatCache::getStatCacheData()->DelStat(path);
   S3FS_MALLOCTRIM(0);
 
+  return result;
+}
+
+static int s3fs_unlink(const char* path)
+{
+  clock_t time_req;
+  time_req = clock();
+  int result = s3fs_unlink_actual(path);
+  time_req = clock()- time_req;
+  S3FS_PRN_INFO("CSE[s3fs_unlink][time_elapsed=%9.6f seconds]", (float)time_req/CLOCKS_PER_SEC);
   return result;
 }
 
@@ -1122,7 +1182,7 @@ static int directory_empty(const char* path)
   return 0;
 }
 
-static int s3fs_rmdir(const char* path)
+static int s3fs_rmdir_actual(const char* path)
 {
   int result;
   string strpath;
@@ -1178,7 +1238,17 @@ static int s3fs_rmdir(const char* path)
   return result;
 }
 
-static int s3fs_symlink(const char* from, const char* to)
+static int s3fs_rmdir(const char* path)
+{
+  clock_t time_req;
+  time_req = clock();
+  int result = s3fs_rmdir_actual(path);
+  time_req = clock()- time_req;
+  S3FS_PRN_INFO("CSE[s3fs_rmdir][time_elapsed=%9.6f seconds]", (float)time_req/CLOCKS_PER_SEC);
+  return result;
+}
+
+static int s3fs_symlink_actual(const char* from, const char* to)
 {
   int result;
   struct fuse_context* pcxt;
@@ -1228,6 +1298,16 @@ static int s3fs_symlink(const char* from, const char* to)
   StatCache::getStatCacheData()->DelStat(to);
   S3FS_MALLOCTRIM(0);
 
+  return result;
+}
+
+static int s3fs_symlink(const char* from, const char* to)
+{
+  clock_t time_req;
+  time_req = clock();
+  int result = s3fs_symlink_actual(from, to);
+  time_req = clock()- time_req;
+  S3FS_PRN_INFO("CSE[s3fs_symlink][time_elapsed=%9.6f seconds]", (float)time_req/CLOCKS_PER_SEC);
   return result;
 }
 
@@ -1498,7 +1578,7 @@ static int rename_directory(const char* from, const char* to)
   return 0;
 }
 
-static int s3fs_rename(const char* from, const char* to)
+static int s3fs_rename_actual(const char* from, const char* to)
 {
   struct stat buf;
   int result;
@@ -1534,13 +1614,33 @@ static int s3fs_rename(const char* from, const char* to)
   return result;
 }
 
-static int s3fs_link(const char* from, const char* to)
+static int s3fs_rename(const char* from, const char* to)
+{
+  clock_t time_req;
+  time_req = clock();
+  int result = s3fs_rename_actual(from, to);
+  time_req = clock()- time_req;
+  S3FS_PRN_INFO("CSE[s3fs_rename][time_elapsed=%9.6f seconds]", (float)time_req/CLOCKS_PER_SEC);
+  return result;
+}
+
+static int s3fs_link_actual(const char* from, const char* to)
 {
   S3FS_PRN_INFO("CSE[s3fs_link][from=%s][to=%s]", from, to);
   return -EPERM;
 }
 
-static int s3fs_chmod(const char* path, mode_t mode)
+static int s3fs_link(const char* from, const char* to)
+{
+  clock_t time_req;
+  time_req = clock();
+  int result = s3fs_link_actual(from, to);
+  time_req = clock()- time_req;
+  S3FS_PRN_INFO("CSE[s3fs_link][time_elapsed=%9.6f seconds]", (float)time_req/CLOCKS_PER_SEC);
+  return result;
+}
+
+static int s3fs_chmod_actual(const char* path, mode_t mode)
 {
   int result;
   string strpath;
@@ -1615,7 +1715,17 @@ static int s3fs_chmod(const char* path, mode_t mode)
   return 0;
 }
 
-static int s3fs_chmod_nocopy(const char* path, mode_t mode)
+static int s3fs_chmod(const char* path, mode_t mode)
+{
+  clock_t time_req;
+  time_req = clock();
+  int result = s3fs_chmod_actual(path, mode);
+  time_req = clock()- time_req;
+  S3FS_PRN_INFO("CSE[s3fs_chmod][time_elapsed=%9.6f seconds]", (float)time_req/CLOCKS_PER_SEC);
+  return result;
+}
+
+static int s3fs_chmod_nocopy_actual(const char* path, mode_t mode)
 {
   int         result;
   string      strpath;
@@ -1691,7 +1801,17 @@ static int s3fs_chmod_nocopy(const char* path, mode_t mode)
   return result;
 }
 
-static int s3fs_chown(const char* path, uid_t uid, gid_t gid)
+static int s3fs_chmod_nocopy(const char* path, mode_t mode)
+{
+  clock_t time_req;
+  time_req = clock();
+  int result = s3fs_chmod_nocopy_actual(path, mode);
+  time_req = clock()- time_req;
+  S3FS_PRN_INFO("CSE[s3fs_chmod_nocopy][time_elapsed=%9.6f seconds]", (float)time_req/CLOCKS_PER_SEC);
+  return result;
+}
+
+static int s3fs_chown_actual(const char* path, uid_t uid, gid_t gid)
 {
   int result;
   string strpath;
@@ -1761,7 +1881,17 @@ static int s3fs_chown(const char* path, uid_t uid, gid_t gid)
   return 0;
 }
 
-static int s3fs_chown_nocopy(const char* path, uid_t uid, gid_t gid)
+static int s3fs_chown(const char* path, uid_t uid, gid_t gid)
+{
+  clock_t time_req;
+  time_req = clock();
+  int result = s3fs_chown_actual(path, uid, gid);
+  time_req = clock()- time_req;
+  S3FS_PRN_INFO("CSE[s3fs_chown][time_elapsed=%9.6f seconds]", (float)time_req/CLOCKS_PER_SEC);
+  return result;
+}
+
+static int s3fs_chown_nocopy_actual(const char* path, uid_t uid, gid_t gid)
 {
   int         result;
   string      strpath;
@@ -1845,7 +1975,17 @@ static int s3fs_chown_nocopy(const char* path, uid_t uid, gid_t gid)
   return result;
 }
 
-static int s3fs_utimens(const char* path, const struct timespec ts[2])
+static int s3fs_chown_nocopy(const char* path, uid_t uid, gid_t gid)
+{
+  clock_t time_req;
+  time_req = clock();
+  int result = s3fs_chown_nocopy_actual(path, uid, gid);
+  time_req = clock()- time_req;
+  S3FS_PRN_INFO("CSE[s3fs_chown_nocopy][time_elapsed=%9.6f seconds]", (float)time_req/CLOCKS_PER_SEC);
+  return result;
+}
+
+static int s3fs_utimens_actual(const char* path, const struct timespec ts[2])
 {
   int result;
   string strpath;
@@ -1910,7 +2050,17 @@ static int s3fs_utimens(const char* path, const struct timespec ts[2])
   return 0;
 }
 
-static int s3fs_utimens_nocopy(const char* path, const struct timespec ts[2])
+static int s3fs_utimens(const char* path, const struct timespec ts[2])
+{
+  clock_t time_req;
+  time_req = clock();
+  int result = s3fs_utimens_actual(path, ts);
+  time_req = clock()- time_req;
+  S3FS_PRN_INFO("CSE[s3fs_utimens][time_elapsed=%9.6f seconds]", (float)time_req/CLOCKS_PER_SEC);
+  return result;
+}
+
+static int s3fs_utimens_nocopy_actual(const char* path, const struct timespec ts[2])
 {
   int         result;
   string      strpath;
@@ -1992,7 +2142,17 @@ static int s3fs_utimens_nocopy(const char* path, const struct timespec ts[2])
   return result;
 }
 
-static int s3fs_truncate(const char* path, off_t size)
+static int s3fs_utimens_nocopy(const char* path, const struct timespec ts[2])
+{
+  clock_t time_req;
+  time_req = clock();
+  int result = s3fs_utimens_nocopy_actual(path, ts);
+  time_req = clock()- time_req;
+  S3FS_PRN_INFO("CSE[s3fs_utimens_nocopy][time_elapsed=%9.6f seconds]", (float)time_req/CLOCKS_PER_SEC);
+  return result;
+}
+
+static int s3fs_truncate_actual(const char* path, off_t size)
 {
   int result;
   headers_t meta;
@@ -2057,7 +2217,17 @@ static int s3fs_truncate(const char* path, off_t size)
   return result;
 }
 
-static int s3fs_open(const char* path, struct fuse_file_info* fi)
+static int s3fs_truncate(const char* path, off_t size)
+{
+  clock_t time_req;
+  time_req = clock();
+  int result = s3fs_truncate_actual(path, size);
+  time_req = clock()- time_req;
+  S3FS_PRN_INFO("CSE[s3fs_truncate][time_elapsed=%9.6f seconds]", (float)time_req/CLOCKS_PER_SEC);
+  return result;
+}
+
+static int s3fs_open_actual(const char* path, struct fuse_file_info* fi)
 {
   int result;
   struct stat st;
@@ -2117,7 +2287,17 @@ static int s3fs_open(const char* path, struct fuse_file_info* fi)
   return 0;
 }
 
-static int s3fs_read(const char* path, char* buf, size_t size, off_t offset, struct fuse_file_info* fi)
+static int s3fs_open(const char* path, struct fuse_file_info* fi)
+{
+  clock_t time_req;
+  time_req = clock();
+  int result = s3fs_open_actual(path, fi);
+  time_req = clock()- time_req;
+  S3FS_PRN_INFO("CSE[s3fs_open][time_elapsed=%9.6f seconds]", (float)time_req/CLOCKS_PER_SEC);
+  return result;
+}
+
+static int s3fs_read_actual(const char* path, char* buf, size_t size, off_t offset, struct fuse_file_info* fi)
 {
   ssize_t res;
 
@@ -2148,7 +2328,17 @@ static int s3fs_read(const char* path, char* buf, size_t size, off_t offset, str
   return static_cast<int>(res);
 }
 
-static int s3fs_write(const char* path, const char* buf, size_t size, off_t offset, struct fuse_file_info* fi)
+static int s3fs_read(const char* path, char* buf, size_t size, off_t offset, struct fuse_file_info* fi)
+{
+  clock_t time_req;
+  time_req = clock();
+  int result = s3fs_read_actual(path, buf, size, offset, fi);
+  time_req = clock()- time_req;
+  S3FS_PRN_INFO("CSE[s3fs_read][time_elapsed=%9.6f seconds]", (float)time_req/CLOCKS_PER_SEC);
+  return result;
+}
+
+static int s3fs_write_actual(const char* path, const char* buf, size_t size, off_t offset, struct fuse_file_info* fi)
 {
   ssize_t res;
 
@@ -2170,7 +2360,17 @@ static int s3fs_write(const char* path, const char* buf, size_t size, off_t offs
   return static_cast<int>(res);
 }
 
-static int s3fs_statfs(const char* path, struct statvfs* stbuf)
+static int s3fs_write(const char* path, const char* buf, size_t size, off_t offset, struct fuse_file_info* fi)
+{
+  clock_t time_req;
+  time_req = clock();
+  int result = s3fs_write_actual(path, buf, size, offset, fi);
+  time_req = clock()- time_req;
+  S3FS_PRN_INFO("CSE[s3fs_write][time_elapsed=%9.6f seconds]", (float)time_req/CLOCKS_PER_SEC);
+  return result;
+}
+
+static int s3fs_statfs_actual(const char* path, struct statvfs* stbuf)
 {
   S3FS_PRN_INFO("CSE[s3fs_statfs][path=%s]", path);
   // 256T
@@ -2182,7 +2382,17 @@ static int s3fs_statfs(const char* path, struct statvfs* stbuf)
   return 0;
 }
 
-static int s3fs_flush(const char* path, struct fuse_file_info* fi)
+static int s3fs_statfs(const char* path, struct statvfs* stbuf)
+{
+  clock_t time_req;
+  time_req = clock();
+  int result = s3fs_statfs_actual(path, stbuf);
+  time_req = clock()- time_req;
+  S3FS_PRN_INFO("CSE[s3fs_statfs][time_elapsed=%9.6f seconds]", (float)time_req/CLOCKS_PER_SEC);
+  return result;
+}
+
+static int s3fs_flush_actual(const char* path, struct fuse_file_info* fi)
 {
   int result;
 
@@ -2212,10 +2422,20 @@ static int s3fs_flush(const char* path, struct fuse_file_info* fi)
   return result;
 }
 
+static int s3fs_flush(const char* path, struct fuse_file_info* fi)
+{
+  clock_t time_req;
+  time_req = clock();
+  int result = s3fs_flush_actual(path, fi);
+  time_req = clock()- time_req;
+  S3FS_PRN_INFO("CSE[s3fs_flush][time_elapsed=%9.6f seconds]", (float)time_req/CLOCKS_PER_SEC);
+  return result;
+}
+
 // [NOTICE]
 // Assumption is a valid fd.
 //
-static int s3fs_fsync(const char* path, int datasync, struct fuse_file_info* fi)
+static int s3fs_fsync_actual(const char* path, int datasync, struct fuse_file_info* fi)
 {
   int result = 0;
 
@@ -2237,7 +2457,17 @@ static int s3fs_fsync(const char* path, int datasync, struct fuse_file_info* fi)
   return result;
 }
 
-static int s3fs_release(const char* path, struct fuse_file_info* fi)
+static int s3fs_fsync(const char* path, int datasync, struct fuse_file_info* fi)
+{
+  clock_t time_req;
+  time_req = clock();
+  int result = s3fs_fsync_actual(path, datasync, fi);
+  time_req = clock()- time_req;
+  S3FS_PRN_INFO("CSE[s3fs_fsync][time_elapsed=%9.6f seconds]", (float)time_req/CLOCKS_PER_SEC);
+  return result;
+}
+
+static int s3fs_release_actual(const char* path, struct fuse_file_info* fi)
 {
   S3FS_PRN_INFO("CSE[s3fs_release][path=%s][fd=%llu]", path, (unsigned long long)(fi->fh));
 
@@ -2277,7 +2507,17 @@ static int s3fs_release(const char* path, struct fuse_file_info* fi)
   return 0;
 }
 
-static int s3fs_opendir(const char* path, struct fuse_file_info* fi)
+static int s3fs_release(const char* path, struct fuse_file_info* fi)
+{
+  clock_t time_req;
+  time_req = clock();
+  int result = s3fs_release_actual(path, fi);
+  time_req = clock()- time_req;
+  S3FS_PRN_INFO("CSE[s3fs_release][time_elapsed=%9.6f seconds]", (float)time_req/CLOCKS_PER_SEC);
+  return result;
+}
+
+static int s3fs_opendir_actual(const char* path, struct fuse_file_info* fi)
 {
   int result;
   int mask = (O_RDONLY != (fi->flags & O_ACCMODE) ? W_OK : R_OK) | X_OK;
@@ -2289,6 +2529,16 @@ static int s3fs_opendir(const char* path, struct fuse_file_info* fi)
   }
   S3FS_MALLOCTRIM(0);
 
+  return result;
+}
+
+static int s3fs_opendir(const char* path, struct fuse_file_info* fi)
+{
+  clock_t time_req;
+  time_req = clock();
+  int result = s3fs_opendir_actual(path, fi);
+  time_req = clock()- time_req;
+  S3FS_PRN_INFO("CSE[s3fs_opendir][time_elapsed=%9.6f seconds]", (float)time_req/CLOCKS_PER_SEC);
   return result;
 }
 
@@ -2428,7 +2678,7 @@ static int readdir_multi_head(const char* path, S3ObjList& head, void* buf, fuse
   return result;
 }
 
-static int s3fs_readdir(const char* path, void* buf, fuse_fill_dir_t filler, off_t offset, struct fuse_file_info* fi)
+static int s3fs_readdir_actual(const char* path, void* buf, fuse_fill_dir_t filler, off_t offset, struct fuse_file_info* fi)
 {
   S3ObjList head;
   int result;
@@ -2462,6 +2712,16 @@ static int s3fs_readdir(const char* path, void* buf, fuse_fill_dir_t filler, off
   }
   S3FS_MALLOCTRIM(0);
 
+  return result;
+}
+
+static int s3fs_readdir(const char* path, void* buf, fuse_fill_dir_t filler, off_t offset, struct fuse_file_info* fi)
+{
+  clock_t time_req;
+  time_req = clock();
+  int result = s3fs_readdir_actual(path, buf, filler, offset, fi);
+  time_req = clock()- time_req;
+  S3FS_PRN_INFO("CSE[s3fs_readdir][time_elapsed=%9.6f seconds]", (float)time_req/CLOCKS_PER_SEC);
   return result;
 }
 
@@ -3028,9 +3288,9 @@ static int set_xattrs_to_header(headers_t& meta, const char* name, const char* v
 }
 
 #if defined(__APPLE__)
-static int s3fs_setxattr(const char* path, const char* name, const char* value, size_t size, int flags, uint32_t position)
+static int s3fs_setxattr_actual(const char* path, const char* name, const char* value, size_t size, int flags, uint32_t position)
 #else
-static int s3fs_setxattr(const char* path, const char* name, const char* value, size_t size, int flags)
+static int s3fs_setxattr_actual(const char* path, const char* name, const char* value, size_t size, int flags)
 #endif
 {
   S3FS_PRN_INFO("CSE[s3fs_setxattr][path=%s][name=%s][value=%p][size=%zu][flags=%d]", path, name, value, size, flags);
@@ -3115,9 +3375,28 @@ static int s3fs_setxattr(const char* path, const char* name, const char* value, 
 }
 
 #if defined(__APPLE__)
-static int s3fs_getxattr(const char* path, const char* name, char* value, size_t size, uint32_t position)
+static int s3fs_setxattr(const char* path, const char* name, const char* value, size_t size, int flags, uint32_t position)
 #else
-static int s3fs_getxattr(const char* path, const char* name, char* value, size_t size)
+static int s3fs_setxattr(const char* path, const char* name, const char* value, size_t size, int flags)
+#endif
+{
+  clock_t time_req;
+  time_req = clock();
+  int result;
+#if defined(__APPLE__)
+  result = s3fs_setxattr_actual(path, name, value, size, flags, position);
+#else
+  result = s3fs_setxattr_actual(path, name, value, size, flags);
+#endif
+  time_req = clock()- time_req;
+  S3FS_PRN_INFO("CSE[s3fs_setxattr][time_elapsed=%9.6f seconds]", (float)time_req/CLOCKS_PER_SEC);
+  return result;
+}
+
+#if defined(__APPLE__)
+static int s3fs_getxattr_actual(const char* path, const char* name, char* value, size_t size, uint32_t position)
+#else
+static int s3fs_getxattr_actual(const char* path, const char* name, char* value, size_t size)
 #endif
 {
   S3FS_PRN_INFO("CSE[s3fs_getxattr][path=%s][name=%s][value=%p][size=%zu]", path, name, value, size);
@@ -3189,7 +3468,26 @@ static int s3fs_getxattr(const char* path, const char* name, char* value, size_t
   return static_cast<int>(length);
 }
 
-static int s3fs_listxattr(const char* path, char* list, size_t size)
+#if defined(__APPLE__)
+static int s3fs_getxattr(const char* path, const char* name, char* value, size_t size, uint32_t position)
+#else
+static int s3fs_getxattr(const char* path, const char* name, char* value, size_t size)
+#endif
+{
+  clock_t time_req;
+  time_req = clock();
+  int result;
+#if defined(__APPLE__)
+  result = s3fs_getxattr_actual(path, name, value, size, position);
+#else
+  result = s3fs_getxattr_actual(path, name, value, size);
+#endif
+  time_req = clock()- time_req;
+  S3FS_PRN_INFO("CSE[s3fs_getxattr][time_elapsed=%9.6f seconds]", (float)time_req/CLOCKS_PER_SEC);
+  return result;
+}
+
+static int s3fs_listxattr_actual(const char* path, char* list, size_t size)
 {
   S3FS_PRN_INFO("CSE[s3fs_listxattr][path=%s][list=%p][size=%zu]", path, list, size);
 
@@ -3257,7 +3555,17 @@ static int s3fs_listxattr(const char* path, char* list, size_t size)
   return total;
 }
 
-static int s3fs_removexattr(const char* path, const char* name)
+static int s3fs_listxattr(const char* path, char* list, size_t size)
+{
+  clock_t time_req;
+  time_req = clock();
+  int result = s3fs_listxattr_actual(path, list, size);
+  time_req = clock()- time_req;
+  S3FS_PRN_INFO("CSE[s3fs_listxattr][time_elapsed=%9.6f seconds]", (float)time_req/CLOCKS_PER_SEC);
+  return result;
+}
+
+static int s3fs_removexattr_actual(const char* path, const char* name)
 {
   S3FS_PRN_INFO("CSE[s3fs_removexattr][path=%s][name=%s]", path, name);
 
@@ -3362,7 +3670,17 @@ static int s3fs_removexattr(const char* path, const char* name)
 
   return 0;
 }
-   
+
+static int s3fs_removexattr(const char* path, const char* name)
+{
+  clock_t time_req;
+  time_req = clock();
+  int result = s3fs_removexattr_actual(path, name);
+  time_req = clock()- time_req;
+  S3FS_PRN_INFO("CSE[s3fs_removexattr][time_elapsed=%9.6f seconds]", (float)time_req/CLOCKS_PER_SEC);
+  return result;
+}
+
 // s3fs_init calls this function to exit cleanly from the fuse event loop.
 //
 // There's no way to pass an exit status to the high-level event loop API, so 
@@ -3376,7 +3694,7 @@ static void s3fs_exit_fuseloop(int exit_status) {
     }
 }
 
-static void* s3fs_init(struct fuse_conn_info* conn)
+static void* s3fs_init_actual(struct fuse_conn_info* conn)
 {
   S3FS_PRN_INIT_INFO("CSE[s3fs_init]init v%s(commit:%s) with %s", VERSION, COMMIT_HASH_VAL, s3fs_crypt_lib_name());
 
@@ -3425,7 +3743,17 @@ static void* s3fs_init(struct fuse_conn_info* conn)
   return NULL;
 }
 
-static void s3fs_destroy(void*)
+static void* s3fs_init(struct fuse_conn_info* conn)
+{
+  clock_t time_req;
+  time_req = clock();
+  void* result = s3fs_init_actual(conn);
+  time_req = clock()- time_req;
+  S3FS_PRN_INFO("CSE[s3fs_init][time_elapsed=%9.6f seconds]", (float)time_req/CLOCKS_PER_SEC);
+  return result;
+}
+
+static void s3fs_destroy_actual(void*)
 {
   S3FS_PRN_INFO("CSE[destroy]");
 
@@ -3435,7 +3763,16 @@ static void s3fs_destroy(void*)
   }
 }
 
-static int s3fs_access(const char* path, int mask)
+static void s3fs_destroy(void* ptr)
+{
+  clock_t time_req;
+  time_req = clock();
+  s3fs_destroy_actual(ptr);
+  time_req = clock()- time_req;
+  S3FS_PRN_INFO("CSE[s3fs_destroy][time_elapsed=%9.6f seconds]", (float)time_req/CLOCKS_PER_SEC);
+}
+
+static int s3fs_access_actual(const char* path, int mask)
 {
   S3FS_PRN_INFO("CSE[s3fs_access][path=%s][mask=%s%s%s%s]", path,
           ((mask & R_OK) == R_OK) ? "R_OK " : "",
@@ -3445,6 +3782,16 @@ static int s3fs_access(const char* path, int mask)
 
   int result = check_object_access(path, mask, NULL);
   S3FS_MALLOCTRIM(0);
+  return result;
+}
+
+static int s3fs_access(const char* path, int mask)
+{
+  clock_t time_req;
+  time_req = clock();
+  int result = s3fs_access_actual(path, mask);
+  time_req = clock()- time_req;
+  S3FS_PRN_INFO("CSE[s3fs_access][time_elapsed=%9.6f seconds]", (float)time_req/CLOCKS_PER_SEC);
   return result;
 }
 
